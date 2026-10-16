@@ -32,13 +32,24 @@ if GEMINI_API_KEY:
 def _call_groq(prompt: str) -> str:
     if client is None:
         raise RuntimeError("Groq unavailable — no GROQ_API_KEY")
+    # gpt-oss is a reasoning model: its hidden reasoning tokens count against
+    # the completion budget, so the old 220-token cap (sized for a ~120-word
+    # summary from llama-3.3) could leave no room for the answer itself.
+    # reasoning_effort="low" keeps that overhead small; passed via
+    # extra_body so it works on any groq SDK version.
     response = client.chat.completions.create(
         model=GROQ_MODEL,
         temperature=0.2,
-        max_tokens=220,
+        max_tokens=1024,
         messages=[{"role": "user", "content": prompt}],
+        extra_body={"reasoning_effort": "low"},
     )
-    return response.choices[0].message.content.strip()
+    content = (response.choices[0].message.content or "").strip()
+    if not content:
+        # Raise so generate_summary() falls through to Gemini instead of
+        # writing an empty summary into the resume.
+        raise RuntimeError(f"Groq returned an empty completion (finish_reason={response.choices[0].finish_reason})")
+    return content
 
 
 def _call_gemini(prompt: str) -> str:

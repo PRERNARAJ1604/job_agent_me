@@ -337,7 +337,7 @@ async def sweep(sites: list[str], hours_old: int, roles=TARGET_ROLES, locations=
     # jobspy's own Naukri scraper hits the API directly and gets a hard 406
     # every time. See naukri_playwright.py for why, and its expected ~25%
     # per-request failure rate (already handled there, not here).
-    jobspy_sites = [s for s in sites if s.lower() not in ("naukri", "watchlist")]
+    jobspy_sites = [s for s in sites if s.lower() not in ("naukri", "watchlist", "unstop")]
     if "naukri" in [s.lower() for s in sites]:
         from naukri_playwright import scrape_naukri
         try:
@@ -362,6 +362,20 @@ async def sweep(sites: list[str], hours_old: int, roles=TARGET_ROLES, locations=
             logger.error("Watchlist sweep failed entirely: %s", e)
             watchlist_jobs = []
         for raw in watchlist_jobs:
+            if process_and_save(raw):
+                saved += 1
+
+    if "unstop" in [s.lower() for s in sites]:
+        # Fresher-focused board with a public JSON API — see unstop.py. Like
+        # the watchlist, ignores hours_old (postings stay open for weeks)
+        # and relies on the existing_urls dedup above.
+        from unstop import scrape_unstop
+        try:
+            unstop_jobs = await asyncio.to_thread(scrape_unstop, roles)
+        except Exception as e:
+            logger.error("Unstop sweep failed entirely: %s", e)
+            unstop_jobs = []
+        for raw in unstop_jobs:
             if process_and_save(raw):
                 saved += 1
 

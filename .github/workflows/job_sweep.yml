@@ -23,6 +23,13 @@ on:
     - cron: "11 16 * * *"  # IST 21:41, covers last 4h
   workflow_dispatch:
 
+# The "Commit updated data" step pushes data/jobs.db back to main. This
+# repo's default GITHUB_TOKEN is read-only (confirmed in a 2026-10-16 run
+# log: "Contents: read", push denied to github-actions[bot] with 403), so
+# without this every run silently lost its dedup state.
+permissions:
+  contents: write
+
 jobs:
   sweep:
     runs-on: ubuntu-latest
@@ -132,7 +139,7 @@ jobs:
           EXPERIENCE_LEVEL: ${{ secrets.EXPERIENCE_LEVEL }}
 
         run: |
-          python cloud_run.py --sites indeed,watchlist --hours-old ${{ steps.hours.outputs.value }}
+          python cloud_run.py --sites indeed,watchlist,unstop --hours-old ${{ steps.hours.outputs.value }}
 
       # -------------------------------------------------------
       # Upload generated resumes

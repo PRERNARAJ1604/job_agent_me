@@ -11,16 +11,20 @@ Analyst roles. The previous candidate's resume is kept as
 resume_base_aman_backup.docx (not used by the pipeline).
 """
 
-# Search terms actually sent to jobspy/Naukri as `search_term` — what gets
-# queried. Each term is multiplied by every location (and every site), so
-# keep this list short. "Fresher"/"Entry Level"/"Associate" are in the query
-# itself because neither jobspy nor these boards filter experience server-
-# side reliably — without them results skew heavily to senior postings.
+# Search terms actually sent to jobspy/Naukri/Unstop as `search_term` —
+# what gets queried. Each term is multiplied by every location (and every
+# site), so keep this list short. Chosen from a live LinkedIn test
+# (2026-10, Bengaluru, past week): plain "Software Engineer" returned 8/10
+# senior titles, while each term below returned 0 senior titles in its
+# first 10-20 results. LinkedIn's public search IGNORES its entry-level
+# filter (f_E) — identical results with and without it — so the seniority
+# signal has to come from the query words themselves.
 TARGET_ROLES = [
-    "Software Engineer Fresher",
+    "SDE 1",
     "Associate Software Engineer",
-    "Java Backend Developer",
-    "Entry Level Software Developer",
+    "Trainee Software Engineer",
+    "Graduate Engineer Trainee",
+    "Java Developer Fresher",
     "Data Analyst Fresher",
 ]
 
@@ -35,7 +39,15 @@ ROLE_WORD_GROUPS = [
     # Software developer / engineer
     {"software", "developer"},
     {"software", "engineer"},
+    # "engineering"/"development" are separate words to the matcher —
+    # confirmed live, fresher titles like "Specialist I - Software
+    # Engineering" and "Associate - Software Engineering" were rejected.
+    {"software", "engineering"},
+    {"software", "development"},
     {"software", "trainee"},
+    {"software", "apprentice"},
+    {"graduate", "engineer"},
+    {"engineer", "trainee"},
     {"sde"},
     {"sde1"},
     {"application", "developer"},
@@ -54,6 +66,7 @@ ROLE_WORD_GROUPS = [
     {"fullstack", "developer"},
     # Entry-level data analyst
     {"data", "analyst"},
+    {"database", "analyst"},
     {"reporting", "analyst"},
     {"mis", "analyst"},
     {"analytics", "associate"},

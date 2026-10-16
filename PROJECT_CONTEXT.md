@@ -47,6 +47,8 @@ dynamic_resume_builder.py   — per-job tailoring orchestrator
   ats_validator.py            — keyword-coverage pass/fail
   resume_cache.py             — per-job-hash cache (persists within a run only)
 
+unstop.py                   — Unstop public jobs API (fresher-focused board);
+                               run by the Indeed workflow (--sites ...,unstop)
 email_sender.py             — Gmail API send, with attachment support
 shared_utils.py, ats_detector.py, resume_scorer.py — small shared helpers
 

@@ -32,9 +32,12 @@ MASTER_RESUME = BASE_DIR / "resume_base.docx"
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
+# llama-3.3-70b-versatile was shut down by Groq on 2026-08-16 (every call
+# returned model_not_found); openai/gpt-oss-120b is Groq's recommended
+# replacement — see console.groq.com/docs/deprecations.
 GROQ_MODEL = os.getenv(
     "GROQ_MODEL",
-    "llama-3.3-70b-versatile"
+    "openai/gpt-oss-120b"
 )
 
 # Fallback LLM when Groq is rate-limited/unavailable — free tier on ai.google.dev
@@ -177,10 +180,11 @@ SEARCH_TERM = os.getenv("SEARCH_TERM", "Software Engineer Fresher")
 # Not used by the cloud pipeline — pipeline.py reads job_filters.py's
 # TARGET_ROLES/LOCATIONS. Kept in sync here to avoid confusion.
 TARGET_ROLES = [
-    "Software Engineer Fresher",
+    "SDE 1",
     "Associate Software Engineer",
-    "Java Backend Developer",
-    "Entry Level Software Developer",
+    "Trainee Software Engineer",
+    "Graduate Engineer Trainee",
+    "Java Developer Fresher",
     "Data Analyst Fresher",
 ]
 
