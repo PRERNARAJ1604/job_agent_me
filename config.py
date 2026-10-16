@@ -239,6 +239,13 @@ MAX_APPLY_DELAY = float(
 # Gmail OTP
 # ============================================================
 
+# Preferred: Gmail SMTP with an App Password (myaccount.google.com/apppasswords,
+# needs 2-Step Verification). Never expires, unlike the OAuth token below.
+# When set, email_sender.py uses it; the OAuth token is only a fallback.
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
+# The Gmail account the app password belongs to (= the sender).
+GMAIL_SENDER = os.getenv("GMAIL_SENDER") or EMAIL
+
 GMAIL_CREDENTIALS_FILE = BASE_DIR / "credentials.json"
 
 GMAIL_TOKEN_FILE = BASE_DIR / "token.json"

@@ -15,9 +15,10 @@ usual role/keyword/experience/location filters on the rest.
 
 Unstop postings stay open for weeks with an explicit application deadline,
 so (like career_sites.py's watchlist) this ignores the per-trigger
-hours_old window and relies on pipeline.sweep()'s URL dedup to surface each
-posting only once. The deadline is shown in the digest via the `board`
-column ("unstop · apply by 28 Oct") — no DB schema change needed.
+hours_old window in favour of its own limits (MAX_AGE_DAYS,
+MIN_DAYS_TO_DEADLINE below) and relies on pipeline.sweep()'s URL dedup to
+surface each posting only once. The deadline is shown in the digest via
+the `board` column ("unstop · apply by 28 Oct") — no DB schema change needed.
 """
 
 import re
@@ -34,6 +35,11 @@ logger = logging.getLogger(__name__)
 SEARCH_URL = "https://unstop.com/api/public/opportunity/search-result"
 PER_PAGE = 30
 MAX_PAGES_PER_TERM = 3
+# Same 14-day ceiling as career_sites.WATCHLIST_MAX_AGE_HOURS — fresher
+# postings fill fast. And skip postings closing within 2 days: by the time
+# the digest is read and a resume sent, they're effectively closed.
+MAX_AGE_DAYS = 14
+MIN_DAYS_TO_DEADLINE = 2
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/126.0 Safari/537.36",
@@ -132,7 +138,10 @@ def _is_candidate(opp, now):
     if not opp.get("regn_open"):
         return False
     end = _parse_dt(opp.get("end_date"))
-    if end and end < now:
+    if end and (end - now).total_seconds() < MIN_DAYS_TO_DEADLINE * 86400:
+        return False
+    approved = _parse_dt(opp.get("approved_date"))
+    if approved and (now - approved).total_seconds() > MAX_AGE_DAYS * 86400:
         return False
     audience = {f.get("name") for f in (opp.get("filters") or [])}
     if audience and audience <= {"Experienced Professionals"}:

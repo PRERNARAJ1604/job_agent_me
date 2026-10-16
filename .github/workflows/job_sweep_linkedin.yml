@@ -118,6 +118,7 @@ jobs:
 
           JOB_EMAIL: ${{ secrets.JOB_EMAIL }}
           NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
 
           FIRST_NAME: ${{ secrets.FIRST_NAME }}
           LAST_NAME: ${{ secrets.LAST_NAME }}

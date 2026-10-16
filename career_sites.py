@@ -657,7 +657,11 @@ WATCHLIST_STALE_THRESHOLD = 5
 # likely-abandoned reqs (confirmed live: a Meesho listing 954 days old) while
 # comfortably covering everything found genuinely open right now (17-45
 # days).
-WATCHLIST_MAX_AGE_HOURS = 24 * 60
+#
+# Lowered 60 -> 14 days (2026-10) when retargeted to a fresher candidate:
+# entry-level reqs fill far faster than the senior roles this was tuned
+# for, and 30-day-old postings in the digest were mostly already closed.
+WATCHLIST_MAX_AGE_HOURS = 24 * 14
 
 
 def _track_company_health(company, raw_count):

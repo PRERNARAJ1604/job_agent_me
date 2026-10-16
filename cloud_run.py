@@ -422,7 +422,7 @@ def main(sites: list[str], hours_old: int):
         # silently on every single run for at least 3 days straight before
         # being caught, precisely because there was no signal anywhere
         # that would show up without full (admin-gated) log access.
-        gha_annotate("error", "Digest email failed to send this cycle (send_email_report returned False) — check Gmail OAuth token/credentials, most likely the token needs re-authorizing.")
+        gha_annotate("error", "Digest email failed to send this cycle (send_email_report returned False) — check the GMAIL_APP_PASSWORD secret (or, if unset, the Gmail OAuth token, which expires every 7 days while the Google Cloud app is in Testing).")
 
 
 def notify_failure(sites: list[str], hours_old: int, exc: Exception):
