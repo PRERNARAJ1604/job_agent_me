@@ -49,6 +49,8 @@ dynamic_resume_builder.py   — per-job tailoring orchestrator
 
 unstop.py                   — Unstop public jobs API (fresher-focused board);
                                run by the Indeed workflow (--sites ...,unstop)
+internshala.py              — Internshala /fresher-jobs/ pages (HTML, no API);
+                               run by the Indeed workflow (--sites ...,internshala)
 email_sender.py             — Gmail API send, with attachment support
 shared_utils.py, ats_detector.py, resume_scorer.py — small shared helpers
 

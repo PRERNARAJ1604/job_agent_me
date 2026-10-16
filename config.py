@@ -188,7 +188,7 @@ TARGET_ROLES = [
     "Data Analyst Fresher",
 ]
 
-LOCATIONS = ["Bangalore", "Remote", "Hyderabad", "Pune"]
+LOCATIONS = ["Bangalore", "Remote"]
 
 PORTALS = ["linkedin", "indeed", "naukri"]
 

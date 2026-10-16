@@ -82,9 +82,14 @@ EXCLUDED_ROLE_PHRASES = [
 ]
 EXCLUDED_ROLE_REDEEMERS = set()
 
-# Candidate is Bengaluru-based. Remote is always added on top of these by
-# pipeline.sweep() / location_matches().
-LOCATIONS = ["Bangalore", "Hyderabad", "Pune"]
+# Bangalore only (explicit request, 2026-10). Multi-city postings that
+# include Bangalore still match (location_matches() is a substring check).
+LOCATIONS = ["Bangalore"]
+
+# Remote roles can be done from Bangalore, so they're included — set False
+# for office/hybrid Bangalore jobs only. Controls both the extra "Remote"
+# search in pipeline.sweep() and the "remote" pass in location_matches().
+INCLUDE_REMOTE = True
 
 # Aligned to Prerna's actual resume (resume_base.docx) — real stack only,
 # so the confidence score reflects genuine fit and jd_analyzer never feeds
@@ -114,7 +119,47 @@ MATCH_KEYWORDS = [
     "langchain", "openai", "llm", "streamlit",
 ]
 
+# Minimum number of NON-generic MATCH_KEYWORDS a JD must hit (generic ones
+# are listed below), and at least one must be a real programming skill.
 MIN_MATCH_COUNT = 2
+
+# ── Skill weighting for ranking (pipeline.compute_confidence) ──────────────
+# A plain keyword COUNT ranked badly (checked against the 2026-10-16 digest):
+# an NVIDIA hardware/DevOps role scored 0.56 on "data", "database", "object
+# oriented", while a fresher "Java Developer" on exactly her stack scored
+# 0.31. Her core stack counts 3x, generic words almost nothing.
+CORE_SKILLS = {
+    "java", "spring", "spring boot", "spring mvc", "spring aop", "hibernate",
+    "jpa", "rest api", "restful", "sql", "postgresql", "postgres", "mysql", "redis",
+}
+GENERIC_SKILLS = {"data", "database", "backend", "reporting", "joins", "aggregations", "etl"}
+CORE_SKILL_WEIGHT = 3
+GENERIC_SKILL_WEIGHT = 0.5
+OTHER_SKILL_WEIGHT = 2
+# Real programming skills — a JD must mention at least one of these.
+PROGRAMMING_SKILLS = CORE_SKILLS | {"python", "javascript", "react"}
+# Weighted points that earn the full keyword score. Calibrated on live JDs:
+# a strong fresher full-stack match scores ~30, a solid Java one ~20.
+WEIGHTED_MATCH_CAP = 24
+
+# JD text that says the role is genuinely open to freshers — earns a
+# ranking bonus (not required: many fresher JDs just don't say so).
+FRESHER_SIGNALS = (
+    r"\b(fresher|freshers|entry[- ]level|new grad(uate)?s?|recent graduates?|"
+    r"20(25|26) (batch|pass ?outs?|graduates?)|batch of 20(25|26)|"
+    r"0\s*(-|–|to)\s*[12]\s*(years?|yrs?)|0 years experience|no (prior )?experience required)\b"
+)
+FRESHER_BONUS = 10
+
+# Titles that don't name a software/data role (e.g. "Graduate Engineer
+# Trainee", which ROLE_WORD_GROUPS accepts) must show at least this many
+# programming skills — confirmed live: GE HealthCare's "Graduate Engineer
+# Trainee" was an electronics-hardware role kept on generic words alone.
+SOFTWARE_TITLE_WORDS = {
+    "software", "developer", "sde", "sde1", "backend", "back end", "java",
+    "python", "full stack", "fullstack", "programmer", "application", "analyst",
+}
+GENERIC_TITLE_MIN_PROGRAMMING_SKILLS = 2
 
 # Matched against the FULL JD text — only terms that disqualify a posting
 # no matter where they appear.
@@ -149,6 +194,15 @@ TITLE_ONLY_BLOCKED_KEYWORDS = {
     "frontend",
     "front end",
     "front-end",
+    # Non-software engineering disciplines — confirmed live: NVIDIA
+    # "Software Configuration Management Engineer – Hardware" (a Linux
+    # sysadmin role) ranked 4th in a digest.
+    "hardware",
+    "electrical",
+    "electronics",
+    "mechanical",
+    "civil",
+    "chemical",
     # Internships — candidate graduated May 2026 and wants full-time roles
     "intern",
     "internship",

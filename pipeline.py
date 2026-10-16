@@ -11,6 +11,9 @@ from database import save_job, get_connection
 from ats_detector import detect_ats
 from job_filters import (
     TARGET_ROLES, ROLE_WORD_GROUPS, LOCATIONS, MATCH_KEYWORDS, MIN_MATCH_COUNT,
+    INCLUDE_REMOTE, CORE_SKILLS, GENERIC_SKILLS, PROGRAMMING_SKILLS,
+    CORE_SKILL_WEIGHT, GENERIC_SKILL_WEIGHT, OTHER_SKILL_WEIGHT, WEIGHTED_MATCH_CAP,
+    FRESHER_SIGNALS, FRESHER_BONUS, SOFTWARE_TITLE_WORDS, GENERIC_TITLE_MIN_PROGRAMMING_SKILLS,
     BLOCKED_KEYWORDS, TITLE_ONLY_BLOCKED_KEYWORDS, BIG_COMPANY_MIN_EMPLOYEES,
     BIG_COMPANY_BONUS, MID_COMPANY_MIN_EMPLOYEES, MID_COMPANY_BONUS,
     MAX_EXPERIENCE_YEARS, EXCLUDED_ROLE_PHRASES, EXCLUDED_ROLE_REDEEMERS,
@@ -126,7 +129,7 @@ def role_matches(title: str):
 
 def location_matches(location: str):
     location = location.lower()
-    return any(loc.lower() in location for loc in LOCATIONS) or "remote" in location
+    return any(loc.lower() in location for loc in LOCATIONS) or (INCLUDE_REMOTE and "remote" in location)
 
 def parse_company_size(size_text) -> int:
     """jobspy reports company size as a bucket string ('10,000+', '1,001 to 5,000').
@@ -143,6 +146,17 @@ def company_size_bonus(employees: int) -> int:
         return MID_COMPANY_BONUS
     return 0
 
+_FRESHER_RE = re.compile(FRESHER_SIGNALS, re.IGNORECASE)
+
+
+def skill_weight(keyword: str) -> float:
+    if keyword in CORE_SKILLS:
+        return CORE_SKILL_WEIGHT
+    if keyword in GENERIC_SKILLS:
+        return GENERIC_SKILL_WEIGHT
+    return OTHER_SKILL_WEIGHT
+
+
 def compute_confidence(job: dict):
     # Keyword match is the dominant factor (up to KEYWORD_MATCH_WEIGHT
     # points), scaled against KEYWORD_MATCH_CAP so a genuinely strong match
@@ -156,9 +170,12 @@ def compute_confidence(job: dict):
     matches = keyword_matches(text, MATCH_KEYWORDS)
     ats_url = detect_ats(job["url"])
 
-    keyword_score = min(len(matches) / KEYWORD_MATCH_CAP, 1.0) * KEYWORD_MATCH_WEIGHT
+    # Weighted, not a plain count — see job_filters.CORE_SKILLS for why.
+    weighted = sum(skill_weight(k) for k in matches)
+    keyword_score = min(weighted / WEIGHTED_MATCH_CAP, 1.0) * KEYWORD_MATCH_WEIGHT
+    fresher_bonus = FRESHER_BONUS if _FRESHER_RE.search(text) else 0
     ats_bonus = ATS_MATCH_BONUS if ats_url != "generic" else 0
-    confidence = min(keyword_score + ats_bonus + company_size_bonus(job.get("company_size", 0)), 100)
+    confidence = min(keyword_score + fresher_bonus + ats_bonus + company_size_bonus(job.get("company_size", 0)), 100)
 
     return confidence, matches, None
 
@@ -184,10 +201,19 @@ def should_keep(job: dict):
     if blocked_job(text, BLOCKED_KEYWORDS): return False, "blocked_keyword"
     if blocked_job(job["title"].lower(), TITLE_ONLY_BLOCKED_KEYWORDS): return False, "blocked_keyword_title"
 
-    # 4. Keyword match requirement
+    # 4. Skill match requirement — generic words ("data", "database") don't
+    # count towards the minimum, and at least one real programming skill
+    # must appear. Titles that don't name a software/data role ("Graduate
+    # Engineer Trainee") need more programming evidence than that.
     matches = keyword_matches(text, MATCH_KEYWORDS)
-    if len(matches) < MIN_MATCH_COUNT:
-        return False, f"insufficient_keywords: {len(matches)}"
+    specific = [m for m in matches if m not in GENERIC_SKILLS]
+    programming = [m for m in matches if m in PROGRAMMING_SKILLS]
+    if len(specific) < MIN_MATCH_COUNT or not programming:
+        return False, f"insufficient_keywords: {len(specific)} specific, {len(programming)} programming"
+    title_lower = job["title"].lower()
+    if not any(re.search(r"(?<![a-z])" + re.escape(w) + r"(?![a-z])", title_lower) for w in SOFTWARE_TITLE_WORDS):
+        if len(programming) < GENERIC_TITLE_MIN_PROGRAMMING_SKILLS:
+            return False, f"non_software_title: only {len(programming)} programming skill(s)"
 
     # 5. Basic checks
     if len(job["title"]) < 3: return False, "invalid_title"
@@ -331,13 +357,13 @@ async def sweep(sites: list[str], hours_old: int, roles=TARGET_ROLES, locations=
 
     saved = 0
     stale_watchlist_companies = []
-    search_locations = list(locations) + ["Remote"]
+    search_locations = list(locations) + (["Remote"] if INCLUDE_REMOTE else [])
 
     # Naukri goes through a real browser (Playwright) rather than jobspy —
     # jobspy's own Naukri scraper hits the API directly and gets a hard 406
     # every time. See naukri_playwright.py for why, and its expected ~25%
     # per-request failure rate (already handled there, not here).
-    jobspy_sites = [s for s in sites if s.lower() not in ("naukri", "watchlist", "unstop")]
+    jobspy_sites = [s for s in sites if s.lower() not in ("naukri", "watchlist", "unstop", "internshala")]
     if "naukri" in [s.lower() for s in sites]:
         from naukri_playwright import scrape_naukri
         try:
@@ -376,6 +402,18 @@ async def sweep(sites: list[str], hours_old: int, roles=TARGET_ROLES, locations=
             logger.error("Unstop sweep failed entirely: %s", e)
             unstop_jobs = []
         for raw in unstop_jobs:
+            if process_and_save(raw):
+                saved += 1
+
+    if "internshala" in [s.lower() for s in sites]:
+        # Fresher-only listings, parsed from HTML — see internshala.py.
+        from internshala import scrape_internshala
+        try:
+            internshala_jobs = await asyncio.to_thread(scrape_internshala, locations)
+        except Exception as e:
+            logger.error("Internshala sweep failed entirely: %s", e)
+            internshala_jobs = []
+        for raw in internshala_jobs:
             if process_and_save(raw):
                 saved += 1
 
