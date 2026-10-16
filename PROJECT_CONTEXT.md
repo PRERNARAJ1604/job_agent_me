@@ -50,9 +50,9 @@ dynamic_resume_builder.py   — per-job tailoring orchestrator
 email_sender.py             — Gmail API send, with attachment support
 shared_utils.py, ats_detector.py, resume_scorer.py — small shared helpers
 
-apply.py, applier.py        — separate, local-only tool for browser-based
-                               manual-apply assistance. Not part of the cloud
-                               pipeline above; run locally if you want it.
+track_outcome.py            — local-only CLI to record application outcomes
+                               (applied/interview/rejected/offer). Not part of
+                               the cloud pipeline above.
 ```
 
 ## Schedule
@@ -102,9 +102,9 @@ Kept minimal intentionally for the first weeks — widen once results look right
 
 ## Local-only, separate feature
 
-`apply.py`/`applier.py` is a Playwright-based browser automation tool for
-manual-apply assistance, run locally on your own machine. It is entirely
-separate from the cloud pipeline above — `cloud_run.py` does not import it.
+`track_outcome.py` records what happened after manually applying to a job
+from the digest. Run locally; `cloud_run.py` does not import it. (The old
+`apply.py`/`applier.py` auto-apply tool was removed as unreliable.)
 
 ## History note
 

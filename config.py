@@ -244,7 +244,7 @@ GMAIL_SCOPES = [
 ]
 
 # ============================================================
-# Candidate defaults used by applier.py
+# Candidate defaults (profile_loader.py)
 # ============================================================
 
 DEFAULT_ANSWERS.update({

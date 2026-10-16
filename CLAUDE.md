@@ -13,8 +13,8 @@ user applies manually. See `README.md` for the full architecture and
 
 - `cloud_run.py` — the only thing GitHub Actions runs. Also runnable
   directly as a local script (`python cloud_run.py --sites indeed --hours-old 24`).
-- `apply.py`/`applier.py` — separate, local-only browser-automation tool.
-  Not part of the cloud pipeline; don't assume it's wired into `cloud_run.py`.
+- `track_outcome.py` — local-only CLI to record what happened after applying
+  (applied/interview/rejected/offer) in `data/jobs.db`. Not run by Actions.
 
 ## Rules specific to this repo
 
