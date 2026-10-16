@@ -163,7 +163,7 @@ Important ATS Keywords
 
 Rules
 
-1. 90-120 words.
+1. 50-70 words — the resume must stay on one page.
 2. Professional tone.
 3. ATS optimized.
 4. Mention only technologies already present in the candidate profile.
@@ -182,18 +182,41 @@ Rules
     # for 15/15 tailored resumes with no visible error text anywhere.
     llm_errors = {}
     try:
-        return _clean_llm_output(_call_groq(prompt)), "groq", llm_errors
+        return _fit_length(_clean_llm_output(_call_groq(prompt))), "groq", llm_errors
     except Exception as e:
         llm_errors["groq"] = str(e)
         logger.warning("Groq summary generation failed, falling back to Gemini: %s", e)
 
     try:
-        return _clean_llm_output(_call_gemini(prompt)), "gemini", llm_errors
+        return _fit_length(_clean_llm_output(_call_gemini(prompt))), "gemini", llm_errors
     except Exception as e:
         llm_errors["gemini"] = str(e)
         logger.warning("Gemini summary generation failed, using static fallback: %s", e)
 
-    return _static_fallback_summary(keywords), "fallback", llm_errors
+    return _fit_length(_static_fallback_summary(keywords)), "fallback", llm_errors
+
+
+# resume_base.docx is a one-page resume with only a few lines of slack
+# (measured in Word, 2026-10: its own summary is ~53 words, and a 120-word
+# summary — what the prompt used to ask for — pushed the whole EDUCATION
+# section onto page 2). The prompt asks for 50-70 words, but LLMs overshoot
+# word counts, so this is the enforced cap: trim back to the last full
+# sentence that fits, falling back to a hard word cut only if no sentence
+# ends within the limit.
+SUMMARY_MAX_WORDS = 75
+
+
+def _fit_length(text: str, max_words: int = SUMMARY_MAX_WORDS) -> str:
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    clipped = " ".join(words[:max_words])
+    end = max(clipped.rfind(". "), clipped.rfind("! "), clipped.rfind("? "))
+    if clipped.endswith((".", "!", "?")):
+        return clipped
+    if end > len(clipped) // 2:
+        return clipped[:end + 1]
+    return clipped.rstrip(",;:") + "."
 
 
 def _static_fallback_summary(keywords) -> str:

@@ -9,6 +9,7 @@ of the master resume.
 Part 1
 """
 
+import copy
 import re
 
 from summary_generator import _display_keyword
@@ -308,7 +309,7 @@ class SkillsEditor:
 
         self,
 
-        max_new=12,
+        max_new=6,
 
     ):
 
@@ -559,6 +560,10 @@ class SkillsEditor:
         # the next section heading.
         if len(entries) > len(body_paragraphs):
             style = body_paragraphs[-1].style if body_paragraphs else None
+            # Style alone doesn't carry the line's direct paragraph formatting
+            # (spacing before/after), so an inserted line sat tighter than the
+            # existing ones — copy the template line's full <w:pPr> too.
+            template_ppr = body_paragraphs[-1]._p.pPr if body_paragraphs else None
             anchor = paragraphs[end] if end < len(paragraphs) else None
             for category, values in entries[len(body_paragraphs):]:
                 new_para = (
@@ -566,6 +571,10 @@ class SkillsEditor:
                     if anchor is not None
                     else self.parser.document.add_paragraph("", style=style)
                 )
+                if template_ppr is not None:
+                    if new_para._p.pPr is not None:
+                        new_para._p.remove(new_para._p.pPr)
+                    new_para._p.insert(0, copy.deepcopy(template_ppr))
                 write_line(new_para, category, values)
 
         # Fewer category lines than existing paragraph slots — blank the rest.
@@ -581,7 +590,7 @@ class SkillsEditor:
 
         self,
 
-        max_new=12,
+        max_new=6,
 
     ):
 
