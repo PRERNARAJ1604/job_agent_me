@@ -77,16 +77,19 @@ NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", EMAIL)
 LINKEDIN_URL = os.getenv("LINKEDIN_URL", "")
 GITHUB_URL = os.getenv("GITHUB_URL", "")
 
-YEARS_EXP = os.getenv("YEARS_EXP", "6")
-SALARY_LPA = os.getenv("SALARY_LPA", "25")
+YEARS_EXP = os.getenv("YEARS_EXP", "0")
+SALARY_LPA = os.getenv("SALARY_LPA", "")
 
+# 0 = no salary floor (fresher roles rarely list salary, and when they do
+# it is low). "or" guards against an empty-string GitHub secret, which
+# float("") would crash on.
 MIN_SALARY_LPA = float(
-    os.getenv("MIN_SALARY_LPA", "23")
+    os.getenv("MIN_SALARY_LPA") or "0"
 )
 
 EXPERIENCE_LEVEL = os.getenv(
     "EXPERIENCE_LEVEL",
-    "Senior"
+    "Entry"
 )
 
 DEFAULT_ANSWERS = {
@@ -169,16 +172,19 @@ RETRY_FAILED_APPLICATIONS = False
 # Search Settings
 # ============================================================
 
-SEARCH_TERM = os.getenv("SEARCH_TERM", "Data Engineer")
+SEARCH_TERM = os.getenv("SEARCH_TERM", "Software Engineer Fresher")
 
+# Not used by the cloud pipeline — pipeline.py reads job_filters.py's
+# TARGET_ROLES/LOCATIONS. Kept in sync here to avoid confusion.
 TARGET_ROLES = [
-    "Data Analyst",
-    "Analytics Engineer",
-    "AI Engineer",
-    "Data Engineer"
+    "Software Engineer Fresher",
+    "Associate Software Engineer",
+    "Java Backend Developer",
+    "Entry Level Software Developer",
+    "Data Analyst Fresher",
 ]
 
-LOCATIONS = ["Bangalore", "Remote", "Hyderabad"]
+LOCATIONS = ["Bangalore", "Remote", "Hyderabad", "Pune"]
 
 PORTALS = ["linkedin", "indeed", "naukri"]
 

@@ -13,7 +13,7 @@ from job_filters import (
     TARGET_ROLES, ROLE_WORD_GROUPS, LOCATIONS, MATCH_KEYWORDS, MIN_MATCH_COUNT,
     BLOCKED_KEYWORDS, TITLE_ONLY_BLOCKED_KEYWORDS, BIG_COMPANY_MIN_EMPLOYEES,
     BIG_COMPANY_BONUS, MID_COMPANY_MIN_EMPLOYEES, MID_COMPANY_BONUS,
-    MIN_EXPERIENCE_YEARS, EXCLUDED_ROLE_PHRASES, EXCLUDED_ROLE_REDEEMERS,
+    MAX_EXPERIENCE_YEARS, EXCLUDED_ROLE_PHRASES, EXCLUDED_ROLE_REDEEMERS,
     KEYWORD_MATCH_CAP, KEYWORD_MATCH_WEIGHT, ATS_MATCH_BONUS, BLOCKED_COMPANIES,
 )
 from config import PROXIES, MIN_SALARY_LPA
@@ -69,7 +69,11 @@ def extract_experience_range(text: str) -> tuple[int, int] | None:
     if m:
         return int(m.group(1)), int(m.group(1))
 
-    m = re.search(r"(\d+)\s*(?:years?|yrs?)", text)
+    # Bare "N years" only counts when it's followed by "experience" — on
+    # its own it also matches "founded 25 years ago" / "4 years B.Tech",
+    # which under the MAX_EXPERIENCE_YEARS ceiling would wrongly reject a
+    # fresher posting.
+    m = re.search(r"(\d+)\s*(?:years?|yrs?)\s+(?:of\s+)?(?:\w+\s+){0,3}?(?:experience|exp)\b", text)
     if m:
         return int(m.group(1)), int(m.group(1))
 
@@ -173,10 +177,10 @@ def should_keep(job: dict):
     if not location_matches(job["location"]):
         return False, "location_mismatch"
 
-    # 3. Blocked keywords — full JD text for most, title-only for terms
-    # ("marketing"/"sales") that are only a meaningful "wrong job family"
-    # signal when they describe the role itself, not when merely mentioned
-    # in passing (candidate's actual specialty is marketing analytics).
+    # 3. Blocked keywords — full JD text for hard disqualifiers, title-only
+    # for job-family and seniority terms ("senior", "intern", "android")
+    # that are only meaningful when they describe the role itself — fresher
+    # JDs routinely mention them in passing. See job_filters.py.
     if blocked_job(text, BLOCKED_KEYWORDS): return False, "blocked_keyword"
     if blocked_job(job["title"].lower(), TITLE_ONLY_BLOCKED_KEYWORDS): return False, "blocked_keyword_title"
 
@@ -190,15 +194,14 @@ def should_keep(job: dict):
     if not job["company"]: return False, "missing_company"
     if not job["url"]: return False, "missing_url"
 
-    # 6. Experience floor — candidate is 6+ years, don't surface junior/
-    # mid-junior postings. Checks the UPPER bound of a stated range: a
-    # "3-8 years" posting clearly still fits a 6-year candidate even though
-    # its floor is below 5 — only reject when even the ceiling doesn't
-    # reach it (e.g. "0-3 years"). JDs that don't mention years at all
-    # aren't penalized for silence.
+    # 6. Experience ceiling — candidate is a 2026 graduate targeting 0-1
+    # year roles. Checks the LOWER bound of a stated range: a "0-2 years" or
+    # "1-3 years" posting is one she already qualifies for, so only reject
+    # when even the floor is above MAX_EXPERIENCE_YEARS (e.g. "2-5 years",
+    # "3+ years"). JDs that don't mention years at all aren't penalized.
     exp_range = extract_experience_range(text)
-    if exp_range is not None and exp_range[1] < MIN_EXPERIENCE_YEARS:
-        return False, f"experience_too_low: {exp_range[0]}-{exp_range[1]}y stated, need {MIN_EXPERIENCE_YEARS}y+"
+    if exp_range is not None and exp_range[0] > MAX_EXPERIENCE_YEARS:
+        return False, f"experience_too_high: {exp_range[0]}-{exp_range[1]}y stated, max {MAX_EXPERIENCE_YEARS}y"
 
     # 7. Salary floor — same upper-bound logic: a "15-25 LPA" posting can
     # plausibly land at 25 for a strong candidate, so only reject when the

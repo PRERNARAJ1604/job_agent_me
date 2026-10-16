@@ -11,6 +11,8 @@ Part 1
 
 import re
 
+from summary_generator import _display_keyword
+
 from collections import OrderedDict
 
 
@@ -137,208 +139,65 @@ class SkillsEditor:
         JD keyword classifier.
         """
 
+        # Keys must match resume_base.docx's skill-line labels exactly, or
+        # a matched keyword lands on a brand-new duplicate category line.
+        # Order matters: detect_category() substring-matches in dict order,
+        # so "Databases & Caching" must come before "Languages" or "sql"
+        # would claim "postgresql"/"mysql".
         return {
 
-            "AI & LLMs": [
-
-                "llm",
-
-                "gpt",
-
-                "openai",
-
-                "claude",
-
-                "gemini",
-
-                "langchain",
-
-                "rag",
-
-                "vector",
-
-                "prompt",
-
-                "bedrock",
-
-                "chromadb",
-
-                "human-in-the-loop",
-
-            ],
-
-            "Backend": [
-
-                "python",
-
-                "fastapi",
-
-                "flask",
-
-                "django",
-
-                "rest",
-
-                "api",
-
-                "prisma",
-
-                "cron",
-
-            ],
-
-            "Data Engineering": [
-
-                "sql",
-
-                "spark",
-
-                "pyspark",
-
-                "airflow",
-
-                "dbt",
-
-                "etl",
-
-                "elt",
-
-                "snowflake",
-
-                "redshift",
-
-                "databricks",
-
-                "hadoop",
-
-                "kafka",
-
-                "delta",
-
+            "Databases & Caching": [
                 "postgres",
-
-                "db2",
-
+                "mysql",
+                "redis",
+                "rdbms",
+                "mongodb",
             ],
 
-            "Cloud & Deployment": [
+            "Frontend, Backend & APIs": [
+                "spring",
+                "hibernate",
+                "jpa",
+                "rest",
+                "api",
+                "react",
+            ],
 
-                "aws",
+            "Languages": [
+                "java",
+                "python",
+                "sql",
+                "javascript",
+            ],
 
-                "azure",
+            "Testing & Build Tools": [
+                "maven",
+                "junit",
+                "postman",
+            ],
 
-                "gcp",
-
+            "DevOps & Tools": [
+                "git",
                 "docker",
-
-                "kubernetes",
-
-                "terraform",
-
-                "ec2",
-
-                "lambda",
-
-                "s3",
-
-                "rds",
-
-                "glue",
-
-                "amplify",
-
-                "vercel",
-
-                "supabase",
-
-                "n8n",
-
-                "github",
-
             ],
 
-            "BI & Visualization": [
-
-                "tableau",
-
-                "power bi",
-
-                "excel",
-
-                "looker",
-
-                "dashboard",
-
+            "Core Computer Science": [
+                "data structures",
+                "algorithms",
+                "dsa",
+                "oop",
+                "object oriented",
+                "solid principles",
+                "dbms",
+                "operating systems",
+                "computer networks",
             ],
 
-            "ML (Foundational)": [
-
-                "tensorflow",
-
-                "pytorch",
-
-                "xgboost",
-
-                "lightgbm",
-
-                "sklearn",
-
-                "scikit-learn",
-
-                "machine learning",
-
-                "regression",
-
-                "classification",
-
-                "a/b testing",
-
-                "ab testing",
-
-                "a/b tests",
-
-                "ab tests",
-
-                "statistics",
-
-            ],
-
-            "Integrations": [
-
-                "graph api",
-
-                "slack",
-
-                "jira",
-
-                "salesforce",
-
-                "hubspot",
-
-                "resend",
-
-                "google analytics",
-
-                "tiktok ads",
-
-                "next.js",
-
-                "nextjs",
-
-                "typescript",
-
-            ],
-
-            "PDF & Document Processing": [
-
-                "pymupdf",
-
-                "pdfplumber",
-
-                "camelot",
-
-                "openpyxl",
-
+            "AI & LLMs": [
+                "langchain",
+                "openai",
+                "llm",
+                "streamlit",
             ],
 
         }
@@ -384,7 +243,9 @@ class SkillsEditor:
     # Too generic to ever appear as a standalone skill line item — useful
     # for JD-relevance matching (job_filters.MATCH_KEYWORDS) but not as a
     # literal resume entry.
-    GENERIC_SKIP = {"data", "ai", "pipeline", "analytics"}
+    # "restful" too: the resume already says "REST APIs", and the substring
+    # dedup in add_keyword() can't see that "restful" is the same skill.
+    GENERIC_SKIP = {"data", "ai", "pipeline", "analytics", "backend", "database", "reporting", "restful"}
 
     def add_keyword(
 
@@ -433,11 +294,13 @@ class SkillsEditor:
 
             ] = []
 
+        # JD keywords arrive lowercased from MATCH_KEYWORDS — written as-is
+        # they read "langchain, openai" next to properly cased resume text.
         self.skill_categories[
 
             category
 
-        ].append(keyword)
+        ].append(_display_keyword(keyword))
 
     # --------------------------------------------------
 

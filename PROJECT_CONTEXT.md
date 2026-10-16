@@ -69,8 +69,9 @@ kind of detail that drifts and the YAML is the source of truth.
 
 Kept minimal intentionally for the first weeks — widen once results look right.
 - Roles, cities, skill-match keyword list, blocklist: see `job_filters.py`
-- `MIN_EXPERIENCE_YEARS` — rejects postings with an explicitly lower stated
-  experience range; doesn't penalize postings that don't mention years
+- `MAX_EXPERIENCE_YEARS` (1) — candidate is a fresher; rejects postings whose
+  stated experience floor is above it; doesn't penalize postings that don't
+  mention years. Naukri searches also pass `?experience=0`.
 - `MIN_SALARY_LPA` (env var / GitHub secret, `config.py`) — rejects postings
   with an explicitly lower stated salary; doesn't penalize unlisted salary
 

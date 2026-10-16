@@ -71,8 +71,14 @@ _DISPLAY_CASE = {
     "sql": "SQL", "aws": "AWS", "ai": "AI", "llm": "LLM", "rag": "RAG",
     "dbt": "DBT", "etl": "ETL", "elt": "ELT", "rds": "RDS", "bi": "BI",
     "db2": "DB2", "rest api": "REST API", "restful": "RESTful",
-    "next.js": "Next.js", "nextjs": "NextJS", "a/b testing": "A/B testing",
-    "ab testing": "A/B testing", "a/b tests": "A/B tests", "ab tests": "A/B tests",
+    "java": "Java", "javascript": "JavaScript", "spring": "Spring",
+    "spring boot": "Spring Boot", "spring mvc": "Spring MVC",
+    "spring aop": "Spring AOP", "jpa": "JPA",
+    "postgresql": "PostgreSQL", "postgres": "PostgreSQL", "mysql": "MySQL",
+    "junit": "JUnit", "github": "GitHub", "dsa": "DSA", "oop": "OOP",
+    "dbms": "DBMS", "rdbms": "RDBMS", "openai": "OpenAI",
+    "langchain": "LangChain", "solid principles": "SOLID principles",
+    "docker compose": "Docker Compose",
 }
 
 
@@ -198,13 +204,13 @@ def _static_fallback_summary(keywords) -> str:
         keyword_clause = None
 
     summary = (
-        "AI Product Engineer and Analytics professional experienced in "
-        "building production-grade AI applications, scalable data pipelines, "
-        "and cloud-based analytics solutions. Skilled in Python, SQL, AWS, "
-        "FastAPI, DBT, Tableau, and modern LLM technologies while delivering "
-        "end-to-end products from client requirements through deployment. "
-        "Strong experience collaborating with stakeholders to develop "
-        "automation, reporting, and decision-support solutions."
+        "Backend Developer and Computer Science graduate experienced in "
+        "building fault-tolerant services and RESTful APIs using Java, Spring "
+        "Boot, PostgreSQL, and Redis, including an idempotent payment engine "
+        "that prevents duplicate transactions. Data analysis internship "
+        "experience writing Python and SQL scripts to clean, validate, and "
+        "report on operational data. Strong foundation in data structures, "
+        "OOP, SOLID principles, and DBMS. Available to join immediately."
     )
     if keyword_clause:
         summary += f" Hands-on experience with {keyword_clause} in particular."

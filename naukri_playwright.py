@@ -26,7 +26,10 @@ from playwright_stealth import Stealth
 
 logger = logging.getLogger(__name__)
 
-SEARCH_URL = "https://www.naukri.com/{role_slug}-jobs-in-{city_slug}"
+# experience=0 is Naukri's own "years of experience" search filter — returns
+# only postings whose stated range includes 0 years (candidate is a fresher).
+# pipeline.should_keep()'s MAX_EXPERIENCE_YEARS check still applies on top.
+SEARCH_URL = "https://www.naukri.com/{role_slug}-jobs-in-{city_slug}?experience=0"
 JOB_CARD_SELECTOR = ".srp-jobtuple-wrapper"
 BLOCK_SIGNALS = ["recaptcha", "access denied", "unusual traffic", "are you a human"]
 

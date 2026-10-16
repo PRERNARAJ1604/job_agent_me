@@ -18,18 +18,17 @@ def load_profile():
 
         "education":
             """
-Bachelor's Degree
-Computer Science
+B.Tech, Computer Science
+Greater Noida Institute of Technology (2022 - 2026)
             """,
 
         "experience":
             """
-Senior Data Consultant
+Data Analyst Intern - SkillEn (Aug 2025 - Jan 2026)
 
-• Built ETL pipelines
-• Developed cloud analytics platforms
-• Delivered AI-powered products
-• Worked with SQL, Python,
-  AWS, Databricks and Snowflake
+• Built Python and SQL scripts to clean and validate operational data
+• Wrote optimized MySQL queries for internal reporting
+• Built an idempotent payment engine (Java, Spring Boot, Redis, PostgreSQL)
+• Built an AI document analysis service (Python, LangChain, OpenAI)
             """,
     }

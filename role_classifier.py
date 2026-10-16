@@ -9,30 +9,20 @@ def classify_role(job_text):
 
     ai_words = [
         "llm",
-        "rag",
-        "machine learning",
-        "genai",
         "langchain",
-        "vector database",
-        "ai engineer",
+        "openai",
+        "genai",
+        "generative ai",
     ]
 
     analytics_words = [
+        "data analyst",
+        "data analysis",
+        "dashboard",
+        "reporting",
+        "excel",
         "power bi",
         "tableau",
-        "dashboard",
-        "analytics",
-        "reporting",
-        "business intelligence",
-    ]
-
-    engineer_words = [
-        "spark",
-        "databricks",
-        "snowflake",
-        "airflow",
-        "etl",
-        "data pipeline",
     ]
 
     if any(k in text for k in ai_words):
@@ -41,4 +31,4 @@ def classify_role(job_text):
     if any(k in text for k in analytics_words):
         return "analytics"
 
-    return "data_engineer"
+    return "backend"

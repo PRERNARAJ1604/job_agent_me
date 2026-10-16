@@ -4,154 +4,160 @@ job_filters.py — Role/location/keyword filtering criteria.
 Pulled out of scraper.py so the cloud pipeline (pipeline.py -> cloud_run.py)
 can import filter criteria without dragging in scraper.py's Playwright
 dependency, which the jobspy-based cloud scrape no longer needs.
+
+Retargeted 2026-10 to Prerna Raj's resume (resume_base.docx): fresher /
+0-1 year Software Developer, Java/Backend Developer and entry-level Data
+Analyst roles. The previous candidate's resume is kept as
+resume_base_aman_backup.docx (not used by the pipeline).
 """
 
-# Search terms actually sent to jobspy as `search_term` — what gets queried.
-# Trimmed 2026-07: Data Engineer/Data Scientist/Machine Learning Engineer
-# removed per explicit request — keeping the role list minimal for the
-# first week before widening again.
+# Search terms actually sent to jobspy/Naukri as `search_term` — what gets
+# queried. Each term is multiplied by every location (and every site), so
+# keep this list short. "Fresher"/"Entry Level"/"Associate" are in the query
+# itself because neither jobspy nor these boards filter experience server-
+# side reliably — without them results skew heavily to senior postings.
 TARGET_ROLES = [
-    "Data Analyst",
-    "Analytics Engineer",
-    "AI Engineer",
-    "BI Analyst",
-    "AI Product Engineer",
+    "Software Engineer Fresher",
+    "Associate Software Engineer",
+    "Java Backend Developer",
+    "Entry Level Software Developer",
+    "Data Analyst Fresher",
 ]
 
 # Title-acceptance rule used by pipeline.role_matches(): a posting is kept
 # if its title contains ALL words in at least one group below, in ANY order
 # and not necessarily adjacent. Word-based rather than literal-phrase
 # matching on purpose — real postings phrase the same role differently
-# ("Senior Analyst, Analytics" vs "Analytics Analyst", "AI Platform
-# Engineer" vs "AI Engineer") and a fixed-phrase list misses these even
-# though they're the same role, not a different one. Still gated by the
-# MATCH_KEYWORDS/MIN_MATCH_COUNT floor below, so this doesn't admit
-# irrelevant roles just from title words alone — deliberately NOT including
-# a bare {"software", "engineer"} group for that reason, that's too generic
-# on title alone regardless of keyword gating.
+# ("Software Engineer - Backend" vs "Backend Software Engineer"). Still
+# gated by the MATCH_KEYWORDS/MIN_MATCH_COUNT floor below, so this doesn't
+# admit irrelevant roles just from title words alone.
 ROLE_WORD_GROUPS = [
+    # Software developer / engineer
+    {"software", "developer"},
+    {"software", "engineer"},
+    {"software", "trainee"},
+    {"sde"},
+    {"sde1"},
+    {"application", "developer"},
+    {"programmer", "analyst"},
+    {"developer", "trainee"},
+    # Backend / Java
+    {"backend", "developer"},
+    {"backend", "engineer"},
+    {"back end", "developer"},
+    {"back-end", "developer"},
+    {"java", "developer"},
+    {"java", "engineer"},
+    {"spring boot", "developer"},
+    {"python", "developer"},
+    {"full stack", "developer"},
+    {"fullstack", "developer"},
+    # Entry-level data analyst
     {"data", "analyst"},
-    {"analytics", "analyst"},
-    {"analytics", "engineer"},
-    {"ai", "engineer"},
-    {"ai", "product", "engineer"},
-    {"bi", "analyst"},
-    {"bi", "engineer"},
-    {"business intelligence", "analyst"},
-    {"business intelligence", "engineer"},
-    {"business", "analyst"},
-    {"analytics", "manager"},
-    {"data", "consultant"},
-    {"tableau", "analyst"},
+    {"reporting", "analyst"},
+    {"mis", "analyst"},
+    {"analytics", "associate"},
 ]
 
-# Titles containing one of these exact phrases were explicitly excluded
-# from TARGET_ROLES above (Data Engineer/Data Scientist/Machine Learning
-# Engineer, dropped 2026-07 per explicit request to keep the role list
-# narrow) — but ROLE_WORD_GROUPS' word-based (non-adjacent) matching could
-# still readmit them via an unrelated group: "Data Engineer II, Data &
-# Analytics" matches {"analytics","engineer"} even though the actual role
-# IS a Data Engineer role with "Analytics" just naming the team, not
-# describing a different, wanted role. Confirmed live: 156 "Data Engineer",
-# 16 "Data Scientist", and 20 "Machine Learning Engineer" titled postings
-# were kept this way, including the single highest-confidence job in the
-# whole database. Reject titles containing one of these phrases outright
-# UNLESS they also contain a redeemer word signaling a genuinely hybrid/
-# adjacent role, not a plain excluded one.
-EXCLUDED_ROLE_PHRASES = ["data engineer", "data scientist", "machine learning engineer"]
-EXCLUDED_ROLE_REDEEMERS = {"analyst", "bi", "product"}
+# Titles containing one of these phrases are rejected outright even if a
+# ROLE_WORD_GROUPS group matches — e.g. "Software Test Engineer" matches
+# {"software","engineer"} but is a QA role, not a development one.
+EXCLUDED_ROLE_PHRASES = [
+    "data scientist", "machine learning engineer", "ml engineer",
+    "qa", "test engineer", "testing", "sdet", "automation tester",
+    "support engineer", "sales engineer", "embedded", "mainframe", "sap",
+]
+EXCLUDED_ROLE_REDEEMERS = set()
 
-# Trimmed 2026-07: Bengaluru dropped (same city as Bangalore, was double-
-# counting search combos), Gurugram dropped for now. Pune added back.
+# Candidate is Bengaluru-based. Remote is always added on top of these by
+# pipeline.sweep() / location_matches().
 LOCATIONS = ["Bangalore", "Hyderabad", "Pune"]
 
-# Aligned to Aman's actual resume (resume_base.docx) — real stack only, so
-# the confidence score reflects genuine fit rather than generic buzzwords.
-# Kept: python/sql/aws/fastapi/docker/github actions/n8n/langchain/openai/
-# claude/gemini/rag/prompt engineering/supabase/vercel/amplify/redshift/dbt.
-# Dropped: spark, airflow, bigquery, power bi, looker(+studio), metabase,
-# superset, agentic — not on the resume at all.
+# Aligned to Prerna's actual resume (resume_base.docx) — real stack only,
+# so the confidence score reflects genuine fit and jd_analyzer never feeds
+# the tailoring step a skill she doesn't have. Every entry below appears in
+# her Skills, Experience or Projects sections.
 MATCH_KEYWORDS = [
-    # Core / data engineering
-    "python", "sql", "data", "analytics", "etl", "elt", "pipeline",
-    "dbt", "redshift", "postgres", "postgresql", "mysql", "db2",
-    # Backend
-    "fastapi", "rest api", "restful", "prisma", "cron",
-    # Cloud & deployment
-    "aws", "amplify", "rds", "vercel", "supabase", "n8n", "docker",
-    "github actions", "bedrock",
-    # AI / LLM — langchain removed 2026-08: not actually on the resume
-    # (audit found it inflating scores on LangChain-heavy postings with no
-    # real matching experience), human-in-the-loop added (it is, twice).
-    "ai", "llm", "openai", "claude", "gemini", "rag",
-    "prompt engineering", "chromadb", "human-in-the-loop",
-    # BI & visualization
-    "tableau", "excel",
-    # PDF / document processing
-    "pymupdf", "pdfplumber", "camelot", "openpyxl",
-    # ML foundational
-    "machine learning", "scikit-learn", "sklearn", "xgboost", "lightgbm",
-    "regression", "classification", "a/b testing", "ab testing",
-    "a/b tests", "ab tests", "statistics",
-    # Integrations / product
-    "graph api", "azure ad", "resend", "google analytics", "tiktok ads",
-    "next.js", "nextjs", "typescript",
+    # Languages
+    "java", "python", "sql", "javascript",
+    # Backend & APIs
+    "spring", "spring boot", "spring mvc", "spring aop", "hibernate", "jpa",
+    "rest api", "restful", "backend",
+    # Frontend
+    "react",
+    # Databases & caching
+    "postgresql", "postgres", "mysql", "redis", "rdbms", "dbms", "database",
+    # Build / test / tools
+    "maven", "junit", "postman", "git", "github",
+    # DevOps
+    "docker", "docker compose",
+    # CS fundamentals — explicitly asked for in most fresher JDs
+    "data structures", "algorithms", "dsa", "oop",
+    "object oriented", "solid principles", "operating systems", "computer networks",
+    # Data analysis (internship + Python/SQL)
+    "data analysis", "data cleaning", "data validation", "reporting",
+    "joins", "aggregations", "etl", "data",
+    # AI project
+    "langchain", "openai", "llm", "streamlit",
 ]
 
 MIN_MATCH_COUNT = 2
 
+# Matched against the FULL JD text — only terms that disqualify a posting
+# no matter where they appear.
 BLOCKED_KEYWORDS = {
-    "intern",
-    "internship",
-    "frontend",
-    "react",
+    "unpaid",
+    "commission only",
+}
+
+# Matched against the TITLE only — these are only a meaningful "wrong job"
+# signal when they describe the role itself. Fresher JDs routinely mention
+# e.g. "internship experience is a plus" or list PHP/Android among optional
+# skills, so scanning the full description for them rejected good postings.
+# Seniority words live here too: the candidate is a 2026 graduate, so
+# anything titled Senior/Lead/etc. is out regardless of the JD body.
+TITLE_ONLY_BLOCKED_KEYWORDS = {
+    # Wrong job family
+    "sales",
+    "marketing",
+    "medical",
+    "customer support",
+    "designer",
+    "graphic",
+    "teacher",
+    "content writer",
+    "account executive",
     "php",
     "wordpress",
     "laravel",
     "ios",
     "android",
     "mobile developer",
-    "designer",
-    "graphic",
-    "account executive",
-    "teacher",
-    "content writer",
-    # Junior/entry-level exclusion — candidate is 6+ years experienced,
-    # explicitly does not want junior/entry postings recommended.
-    "entry level",
-    "entry-level",
-    "fresher",
-    "freshers",
-    "trainee",
-    "campus hire",
-    "graduate program",
-    "junior",
-}
-
-# These four scanned against the FULL JD text (like the rest of
-# BLOCKED_KEYWORDS above) caused false rejections — they're only a
-# meaningful "wrong job family" signal when they describe the ROLE ITSELF,
-# not when merely mentioned in passing, so they're checked against the
-# title only, not the whole description — see pipeline.should_keep().
-# - sales/marketing: candidate's actual specialty is marketing analytics
-#   (google analytics/tiktok ads are real MATCH_KEYWORDS entries), so any
-#   Data/BI Analyst JD that merely mentions "supports the marketing org" or
-#   "partners with sales" in passing got hard-rejected for an unrelated
-#   reason.
-# - medical/customer support: confirmed live rejecting a genuinely
-#   well-matched Twilio "Staff Business Intelligence Engineer" posting —
-#   "medical" hit inside standard EEO boilerplate ("...reproductive health
-#   decisions, or related medical conditions)..."), "customer support" hit
-#   inside a stakeholder-team list ("Finance to Sales to Marketing to
-#   Customer Support"). Neither describes the role itself. Greenhouse/Lever
-#   JDs include this full boilerplate far more often than jobspy-sourced
-#   (LinkedIn/Indeed) listings do, which is why this specific false-positive
-#   surfaced while investigating the watchlist's yield rather than earlier.
-TITLE_ONLY_BLOCKED_KEYWORDS = {
-    "sales",
-    "marketing",
-    "medical",
-    "customer support",
+    "frontend",
+    "front end",
+    "front-end",
+    # Internships — candidate graduated May 2026 and wants full-time roles
+    "intern",
+    "internship",
+    # Seniority
+    "senior",
+    "sr",
+    "lead",
+    "principal",
+    "staff",
+    "architect",
+    "manager",
+    "head",
+    "director",
+    "vp",
+    "vice president",
+    "sse",
+    "ii",
+    "iii",
+    "sde2",
+    "sde3",
+    "sde-2",
+    "sde-3",
 }
 
 # Third-party recruiting marketplaces that repost jobs on LinkedIn/Indeed
@@ -170,11 +176,12 @@ BLOCKED_COMPANIES = {
     "talentgigs",
 }
 
-# Minimum years of experience a posting must require to be kept — a JD
-# stating a lower experience range (e.g. "0-3 years") gets rejected even if
-# it doesn't use an obvious junior/entry keyword above. See
-# pipeline.extract_min_experience_years().
-MIN_EXPERIENCE_YEARS = 5
+# Maximum experience FLOOR a posting may require to be kept — candidate is
+# a 2026 graduate targeting 0-1 year roles. A JD whose stated range starts
+# above this (e.g. "2-4 years", "3+ years") is rejected; "0-2 years" or
+# "1-3 years" is kept since the candidate meets its lower bound. JDs that
+# don't state years at all aren't penalized. See pipeline.should_keep().
+MAX_EXPERIENCE_YEARS = 1
 
 # Employee-count thresholds + bonus points for the "big company" scoring
 # boost in pipeline.compute_confidence(). jobspy reports company size as a
